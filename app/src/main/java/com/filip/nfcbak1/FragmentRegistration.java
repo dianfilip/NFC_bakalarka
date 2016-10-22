@@ -4,11 +4,8 @@ import android.app.Activity;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
-import android.nfc.NdefMessage;
 import android.nfc.NfcAdapter;
-//import android.nfc.NfcEvent;
 import android.os.Bundle;
-import android.os.Parcelable;
 import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -18,18 +15,13 @@ import android.widget.TextView;
 /**
  * Created by Filip on 26.08.2016.
  */
-public class FragmentRegistration extends Fragment /*implements NfcAdapter.CreateNdefMessageCallback,
-        NfcAdapter.OnNdefPushCompleteCallback*/ {
+public class FragmentRegistration extends Fragment {
 
     private Activity mainActivity;
     private NfcAdapter nfcAdpt;
     private PendingIntent nfcIntent;
 
     private TextView receivedMsgTextView;
-
-    private static final int MESSAGE_SENT = 1;
-
-    private String message;
 
     @Override
     public void onAttach(Context context) {
@@ -51,31 +43,16 @@ public class FragmentRegistration extends Fragment /*implements NfcAdapter.Creat
 
     @Override
     public void onViewCreated(final View view, Bundle savedInstanceState) {
-        //receivedMsgTextView = (TextView) getView().findViewById(R.id.receivedMsgTextView);
-
-        //nfcAdpt.setNdefPushMessageCallback(this,mainActivity);
-        //nfcAdpt.setOnNdefPushCompleteCallback(this, mainActivity);
+        receivedMsgTextView = (TextView) getView().findViewById(R.id.receivedMsgTextView);
     }
 
-    /*void processIntent(Intent intent) {
-        Parcelable[] rawMsgs = intent.getParcelableArrayExtra(
-                NfcAdapter.EXTRA_NDEF_MESSAGES);
-        // only one message sent during the beam
-        NdefMessage msg = (NdefMessage) rawMsgs[0];
-        // record 0 contains the MIME type, record 1 is the AAR, if present
-        message = new String(msg.getRecords()[0].getPayload());
-        receivedMsgTextView.setText(message);
-    }*/
+
 
     @Override
     public void onResume() {
         super.onResume();
 
-        // Check to see that the Activity started due to an Android Beam
-        /*if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(mainActivity.getIntent().getAction())) {
-            processIntent(mainActivity.getIntent());
-        }*/
-        //dispatch();
+       //dispatch();
     }
 
     public void dispatch() {
@@ -87,13 +64,4 @@ public class FragmentRegistration extends Fragment /*implements NfcAdapter.Creat
         nfcAdpt.enableForegroundDispatch(getActivity(), nfcIntent, null, null);
     }
 
-    /*@Override
-    public NdefMessage createNdefMessage(NfcEvent event) {
-        return null;
-    }
-
-    @Override
-    public void onNdefPushComplete(NfcEvent event) {
-
-    }*/
 }

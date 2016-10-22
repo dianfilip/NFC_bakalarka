@@ -50,16 +50,6 @@
         android:layout_height="match_parent"
         android:weightSum="1">
 
-        <CheckBox
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Sending"
-            android:id="@+id/sendingBox"
-            android:layout_gravity="center_horizontal"
-            android:checked="false"
-            android:enabled="true"
-            android:clickable="true" />
-
         <Button
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

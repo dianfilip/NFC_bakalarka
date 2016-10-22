@@ -91,17 +91,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onResume() {
         super.onResume();
-
-        Toast.makeText(this,"zaplo ma",Toast.LENGTH_LONG).show();
-
-        //System.out.println(getIntent().getAction());
-        // Check to see that the Activity started due to an Android Beam
-        /*if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(getIntent().getAction())) {
-            System.out.println("som tu");
-
-            FragmentRegistration registration = (FragmentRegistration) adapter.getRegisteredFragment(1);
-            registration.processIntent(getIntent());
-        }*/
     }
 
     @Override
@@ -110,33 +99,6 @@ public class MainActivity extends AppCompatActivity {
         setIntent(intent);
 
         System.out.println("novy intent");
-
-        String hexdump = "";
-        Tag tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
-        String[] techList = tag.getTechList();
-        String searchedTech = Ndef.class.getName();
-        for (String tech : techList) {
-            System.out.println("TECH: " + tech);
-                byte[] tagId = intent.getByteArrayExtra(NfcAdapter.EXTRA_ID);
-                for (int i = 0; i < tagId.length; i++) {
-                    String x = Integer.toHexString(((int) tagId[i] & 0xff));
-                    if (x.length() == 1) {
-                        x = '0' + x;
-                    }
-                    hexdump += x;
-                    if (i < 6) {
-                        hexdump += ":";
-                    }
-                System.out.println(hexdump);
-            }
-        }
-
-        if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(intent.getAction())) {
-            Toast.makeText(this, "Message received!", Toast.LENGTH_LONG).show();
-
-            FragmentAutentification autentification = (FragmentAutentification) adapter.getRegisteredFragment(0);
-            autentification.processIntent(intent);
-        }
     }
 
 }
