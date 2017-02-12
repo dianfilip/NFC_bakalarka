@@ -2,15 +2,12 @@ package com.filip.nfcbak1;
 
 import android.app.Activity;
 import android.app.PendingIntent;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.nfc.NfcAdapter;
 import android.os.Bundle;
-import android.os.IBinder;
 import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -23,7 +20,7 @@ import android.widget.Toast;
 /**
  * Created by Filip on 26.08.2016.
  */
-public class FragmentAutentification extends Fragment {
+public class FragmentAuthentication extends Fragment {
 
     private Activity mainActivity;
     private NfcAdapter nfcAdpt;
@@ -35,8 +32,11 @@ public class FragmentAutentification extends Fragment {
     private TextView sendMsgTextView;
     private TextView receivedMsgTextView;
     private Button setMsgButton;
+    private Button stopButton;
 
     private PackageManager packetManager;
+
+    private AsymmetricEncryption encryption = new AsymmetricEncryption();
 
     @Override
     public void onAttach(Context context) {
@@ -49,6 +49,9 @@ public class FragmentAutentification extends Fragment {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         nfcAdpt = NfcAdapter.getDefaultAdapter(mainActivity);
+        if(nfcAdpt != null) {
+            nfcAdpt.setNdefPushMessage(null, mainActivity);
+        }
     }
 
     @Override
@@ -63,6 +66,7 @@ public class FragmentAutentification extends Fragment {
         sendMsgTextView = (TextView) getView().findViewById(R.id.sendMsgText);
         receivedMsgTextView = (TextView) getView().findViewById(R.id.receivedMsgTextView);
         setMsgButton = (Button) getView().findViewById(R.id.setMsgButton);
+        stopButton = (Button) getView().findViewById(R.id.stopButton);
 
         assert checkNfcButton != null;
         checkNfcButton.setOnClickListener(
@@ -78,6 +82,15 @@ public class FragmentAutentification extends Fragment {
                 new Button.OnClickListener() {
                     public void onClick(View v) {
                         sendDataToService();
+                    }
+                }
+        );
+
+        assert stopButton != null;
+        stopButton.setOnClickListener(
+                new Button.OnClickListener() {
+                    public void onClick(View v) {
+                        stopService();
                     }
                 }
         );
@@ -109,9 +122,21 @@ public class FragmentAutentification extends Fragment {
     }
 
     public void sendDataToService(){
-        Intent intent = new Intent(mainActivity, MyHostApduService.class);
-        intent.putExtra("message", sendMsgTextView.getText().toString());
+        Intent intent = new Intent(mainActivity, HceService.class);
+        StringBuilder stringBuilder = new StringBuilder();
+        int length = Integer.parseInt(sendMsgTextView.getText().toString());
+        for(int i = 0; i < length; i++) {
+            stringBuilder.append('j');
+        }
+        intent.putExtra("message", stringBuilder.toString());
         mainActivity.startService(intent);
+    }
+
+    public void stopService() {
+        /*Intent intent = new Intent(mainActivity, HceService.class);
+        mainActivity.stopService(intent);*/
+
+        encryption.testMethod();
     }
 
     public void dispatch() {
@@ -136,6 +161,10 @@ public class FragmentAutentification extends Fragment {
     public void onPause() {
         super.onPause();
         //nfcAdpt.disableReaderMode(mainActivity);
+    }
+
+    public void setReceivedMsgTextView(String msg) {
+        receivedMsgTextView.setText(msg);
     }
 
 }

@@ -1,33 +1,24 @@
 package com.filip.nfcbak1;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
-import android.nfc.NfcAdapter;
-import android.nfc.Tag;
-import android.nfc.tech.Ndef;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
+import android.content.IntentFilter;
 import android.support.design.widget.TabLayout;
+import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 
-import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentManager;
-import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.os.Bundle;
-import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
-import android.view.ViewGroup;
-
-import android.widget.TextView;
-import android.widget.Toast;
 
 public class MainActivity extends AppCompatActivity {
 
     private ViewPager mViewPager;
     private PagerAdapter adapter;
+    private ServiceIntentReceiver serviceIntentReceiver;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -91,6 +82,19 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onResume() {
         super.onResume();
+
+        if (serviceIntentReceiver == null) serviceIntentReceiver = new ServiceIntentReceiver();
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(HceService.RECEIVED_MSG_INTENT);
+        intentFilter.addAction(HceService.AUTHENTICATION_SUCCESFUL);
+        LocalBroadcastManager.getInstance(getApplicationContext()).registerReceiver(serviceIntentReceiver, intentFilter);
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+
+        if (serviceIntentReceiver != null)  LocalBroadcastManager.getInstance(getApplicationContext()).unregisterReceiver(serviceIntentReceiver);
     }
 
     @Override
@@ -99,6 +103,20 @@ public class MainActivity extends AppCompatActivity {
         setIntent(intent);
 
         System.out.println("novy intent");
+    }
+
+    private class ServiceIntentReceiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            FragmentAuthentication fragmentAut = (FragmentAuthentication) adapter.getRegisteredFragment(0);
+
+            if (intent.getAction().equals(HceService.RECEIVED_MSG_INTENT)) {
+                fragmentAut.setReceivedMsgTextView(intent.getExtras().getString("message"));
+            }
+            if (intent.getAction().equals(HceService.AUTHENTICATION_SUCCESFUL)) {
+                fragmentAut.setReceivedMsgTextView("succesful");
+            }
+        }
     }
 
 }

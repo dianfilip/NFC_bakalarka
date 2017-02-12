@@ -6,8 +6,6 @@ import android.support.v4.app.FragmentManager;
 /**
  * Created by Filip on 26.07.2016.
  */
-import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentManager;
 
 public class PagerAdapter extends SmartFragmentStatePagerAdapter {
     int mNumOfTabs;
@@ -22,7 +20,7 @@ public class PagerAdapter extends SmartFragmentStatePagerAdapter {
 
         switch (position) {
             case 0:
-                FragmentAutentification tab1 = new FragmentAutentification();
+                FragmentAuthentication tab1 = new FragmentAuthentication();
                 return tab1;
             case 1:
                 FragmentRegistration tab2 = new FragmentRegistration();
