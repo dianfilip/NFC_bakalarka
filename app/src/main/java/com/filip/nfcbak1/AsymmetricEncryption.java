@@ -117,7 +117,8 @@ public class AsymmetricEncryption {
             Log.e(TAG, "RSA decryption error");
         }
 
-        String decodedString = Base64.encodeToString(decodedBytes, Base64.DEFAULT);
+        String decodedString = new String(decodedBytes);
+        //String decodedString = Base64.encodeToString(decodedBytes, Base64.DEFAULT);
         //Log.i(TAG, "[DECODED]:\n" + decodedString + "\n");
 
         return decodedString;
@@ -133,7 +134,7 @@ public class AsymmetricEncryption {
         }
     }
 
-    public void setPrivateKey(byte[] keyBytes) throws Exception {
+    public void setPrivateKey(byte[] keyBytes) {
 
 
         try {
@@ -163,6 +164,8 @@ public class AsymmetricEncryption {
         } catch (IOException e) {
             e.printStackTrace();
         } catch (GeneralSecurityException e) {
+            e.printStackTrace();
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }

@@ -59,23 +59,9 @@ public class HceService extends HostApduService {
            // return getWelcomeMessage();
         }
         else {
-            String apduString = new String(apdu);
+            /*String apduString = new String(apdu);
 
-            Log.i(TAG, "Received: " + apduString);
-
-            //sendMsgToAcitvity(apduString);
-
-            //encryption.generateKeys();
-
-            /*byte[] key = new byte[1024];
-            for(int i = 0; i < encryption.getPublicKey().getEncoded().length; i++) {
-                key[i] = encryption.getPublicKey().getEncoded()[i];
-            }*/
-
-            String keyStringPublic = "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCh0+deNV2127KGdvxF8YKnMVzB\n" +
-                    "NNm0R4BUeYNBJwMSiYRN9yDlDJS3MXYrQ91zSDxQcRBd7pteutNXdo8dtn3Q+NdL\n" +
-                    "v48gVX6JwxZ0e+KyOJz0JMQSotjLIIZSsfVNoRBSsxEsZuuy/ccWPsleeDS1gfMS\n" +
-                    "xxU7YxH8IgI1yHx5UQIDAQAB";
+            Log.i(TAG, "Received: " + apduString);*/
 
             String keyStringPrivate = "MIICXQIBAAKBgQCh0+deNV2127KGdvxF8YKnMVzBNNm0R4BUeYNBJwMSiYRN9yDl\n" +
                     "DJS3MXYrQ91zSDxQcRBd7pteutNXdo8dtn3Q+NdLv48gVX6JwxZ0e+KyOJz0JMQS\n" +
@@ -90,98 +76,25 @@ public class HceService extends HostApduService {
                     "Y5JQqePc0AtfifNvuvt0vEX4RzVUkl+6hdMzeAiH82E/n8cPIPArykjLu/vg90aa\n" +
                     "pY17CxE516ikfjqigUECQQC0zx98bPTR2vY0s0A8TVhQZCi02baHhLbTcFSt4/Vh\n" +
                     "4hfqSA0ubCMoOTZ/H4TFzmNzfIkRFKh7S9SX9K00zXSB";
-            //String keyStringPublic = Base64.encodeToString(encryption.getPublicKey().getEncoded(), Base64.DEFAULT);
-            Log.i(TAG, "string public: " + keyStringPublic);
-            Log.i(TAG, "string private: " + keyStringPrivate);
 
-            //keyStringPublic = keyStringPublic.substring(0,31);
+            byte[] encodedKey = Base64.decode(keyStringPrivate, Base64.DEFAULT);
 
+            encryption.setPrivateKey(encodedKey);
 
+            byte[] encryptedMsg = encryption.encodeWithPrivate("ahoj");
 
-            byte[] encodedKey = Base64.decode(keyStringPublic, Base64.DEFAULT);
-            //*Key privateKey = new SecretKeySpec(encodedKey, 0, encodedKey.length, "RSA");
-            encryption.setPublicKey(encodedKey);
-            Log.i("HCEDEMO", "public key: " + encryption.getPublicKey().toString() + " format: " + encryption.getPublicKey().getFormat());
+            Log.i(TAG, Base64.encodeToString(encryptedMsg, Base64.DEFAULT) + " size: " + encryptedMsg.length);
 
-            try {
-                encodedKey = Base64.decode(keyStringPrivate, Base64.DEFAULT);
-                encryption.setPrivateKey(encodedKey);
-                Log.i("HCEDEMO", "private key: " + encryption.getPrivateKey().toString() + " format: " + encryption.getPrivateKey().getFormat());
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            /*String msg = encryption.decodeWithPrivate(apdu);
 
-            //Log.i(TAG, encryption.getPublicKey().toString());
+            Log.i(TAG, msg + " size: " + msg.length());
 
-            byte[] encodedBytes = null;
-
-
-            /*try {
-                Cipher c = Cipher.getInstance("RSA");
-                c.init(Cipher.ENCRYPT_MODE, encryption.getPublicKey());
-                encodedBytes = c.doFinal("Ahoj".getBytes());
-            } catch (NoSuchAlgorithmException e) {
-                e.printStackTrace();
-            } catch (NoSuchPaddingException e) {
-                e.printStackTrace();
-            } catch (IllegalBlockSizeException e) {
-                e.printStackTrace();
-            } catch (BadPaddingException e) {
-                e.printStackTrace();
-            } catch (InvalidKeyException e) {
-                e.printStackTrace();
-            }*/
-
-
-            byte[] msg = encryption.encodeWithPrivate("ahojdasdasd");
-            String msgString = Base64.encodeToString(msg, Base64.DEFAULT);
-
-            Log.i(TAG, msgString + "size: " + msgString.length());
-
-            byte[] decodedMsg = Base64.decode(msgString, Base64.DEFAULT);
-            String decodedMsgString = encryption.decodeWithPublic(msg);
-
-            Log.i(TAG, decodedMsgString + "size: " + decodedMsgString.length());
-
-            /*try {
-                Key publicKey = KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(encodedKey));
-                Log.i(TAG, "key: " + publicKey.toString());
-            } catch (InvalidKeySpecException e) {
-                e.printStackTrace();
-            } catch (NoSuchAlgorithmException e) {
-                e.printStackTrace();
-            }*/
-
+            byte[] encryptedMsg = encryption.encodeWithPrivate(msg);*/
 
             //return getWelcomeMessage();
             //return encodedBytes;
             //return msgString.getBytes();
-            return apdu;
-
-
-
-
-            //return "nieco".getBytes();
-
-            /*switch (apduString) {
-                case "ahoj":
-                    Log.i("HCEDEMO", "Received: " + apduString);
-
-                    encryption.generateKeys();
-                    byte[] encodedBytes = encryption.encodetWithPrivate(apduString);
-                    String decodedString = encryption.decodeWithPublic(encodedBytes);
-
-                    sendMsgToAcitvity(apduString);
-                    return new String("Vitaj").getBytes();
-
-                default:
-                    Log.i("HCEDEMO", "Invalid APDU");
-
-                    return new String("Invalid APDU").getBytes();
-            }*/
-
-            /*Log.i("HCEDEMO", "Received: " + new String(apdu));
-            return getNextMessage();*/
+            return encryptedMsg;
         }
     }
 
