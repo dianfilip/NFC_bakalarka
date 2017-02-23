@@ -7,12 +7,16 @@ import android.support.v4.content.LocalBroadcastManager;
 import android.util.Base64;
 import android.util.Log;
 
+import java.io.UnsupportedEncodingException;
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.PrivateKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
+import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 
 import javax.crypto.BadPaddingException;
@@ -77,24 +81,38 @@ public class HceService extends HostApduService {
                     "pY17CxE516ikfjqigUECQQC0zx98bPTR2vY0s0A8TVhQZCi02baHhLbTcFSt4/Vh\n" +
                     "4hfqSA0ubCMoOTZ/H4TFzmNzfIkRFKh7S9SX9K00zXSB";
 
-            byte[] encodedKey = Base64.decode(keyStringPrivate, Base64.DEFAULT);
+            //byte[] encodedKey = Base64.decode(keyStringPrivate, Base64.DEFAULT);
 
-            encryption.setPrivateKey(encodedKey);
+            byte[] decoded = null;
 
-            byte[] encryptedMsg = encryption.encodeWithPrivate("ahoj");
+            try {
+                PrivateKey pk = KeyFactory.getInstance("RSA").generatePrivate(new PKCS8EncodedKeySpec(Base64.decode(keyStringPrivate, Base64.DEFAULT)));
+                Cipher ci = Cipher.getInstance("RSA/ECB/PKCS1Padding", "BC");
+                ci.init(Cipher.DECRYPT_MODE,pk);
+                decoded = ci.doFinal(apdu);
+                Log.d(TAG, "decrypted: " + new String(decoded, "UTF-8"));
 
-            Log.i(TAG, Base64.encodeToString(encryptedMsg, Base64.DEFAULT) + " size: " + encryptedMsg.length);
+                ci.init(Cipher.ENCRYPT_MODE,pk);
+                decoded = ci.doFinal("ahoj".getBytes());
+            } catch (InvalidKeySpecException e) {
+                e.printStackTrace();
+            } catch (NoSuchAlgorithmException e) {
+                e.printStackTrace();
+            } catch (NoSuchProviderException e) {
+                e.printStackTrace();
+            } catch (NoSuchPaddingException e) {
+                e.printStackTrace();
+            } catch (InvalidKeyException e) {
+                e.printStackTrace();
+            } catch (BadPaddingException e) {
+                e.printStackTrace();
+            } catch (IllegalBlockSizeException e) {
+                e.printStackTrace();
+            } catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+            }
 
-            /*String msg = encryption.decodeWithPrivate(apdu);
-
-            Log.i(TAG, msg + " size: " + msg.length());
-
-            byte[] encryptedMsg = encryption.encodeWithPrivate(msg);*/
-
-            //return getWelcomeMessage();
-            //return encodedBytes;
-            //return msgString.getBytes();
-            return encryptedMsg;
+            return decoded;
         }
     }
 

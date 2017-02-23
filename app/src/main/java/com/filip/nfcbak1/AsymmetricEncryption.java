@@ -9,6 +9,7 @@ import org.spongycastle.asn1.ASN1Sequence;
 import org.spongycastle.asn1.DERInteger;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.security.GeneralSecurityException;
 import java.security.Key;
@@ -20,6 +21,7 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.Security;
 import java.security.spec.InvalidKeySpecException;
+import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.RSAPrivateCrtKeySpec;
 import java.security.spec.RSAPrivateKeySpec;
 import java.security.spec.X509EncodedKeySpec;
@@ -79,9 +81,9 @@ public class AsymmetricEncryption {
     public byte[] encodeWithPrivate(String toEncode) {
         byte[] encodedBytes = null;
         try {
-            Cipher c = Cipher.getInstance("RSA");
+            Cipher c = Cipher.getInstance("RSA/ECB/PKCS1Padding", "BC");
             c.init(Cipher.ENCRYPT_MODE, privateKey);
-            encodedBytes = c.doFinal(Base64.decode(toEncode, Base64.DEFAULT));
+            encodedBytes = c.doFinal(toEncode.getBytes());
         } catch (Exception e) {
             Log.e(TAG, "RSA encryption error");
         }
@@ -110,14 +112,21 @@ public class AsymmetricEncryption {
     public String decodeWithPrivate(byte[] encodedBytes) {
         byte[] decodedBytes = null;
         try {
-            Cipher c = Cipher.getInstance("RSA");
+            Cipher c = Cipher.getInstance("RSA/ECB/PKCS1Padding", "BC");
             c.init(Cipher.DECRYPT_MODE, privateKey);
             decodedBytes = c.doFinal(encodedBytes);
         } catch (Exception e) {
             Log.e(TAG, "RSA decryption error");
         }
 
-        String decodedString = new String(decodedBytes);
+        String decodedString = null;
+
+        try {
+            decodedString = new String(decodedBytes, "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+
         //String decodedString = Base64.encodeToString(decodedBytes, Base64.DEFAULT);
         //Log.i(TAG, "[DECODED]:\n" + decodedString + "\n");
 
@@ -136,8 +145,15 @@ public class AsymmetricEncryption {
 
     public void setPrivateKey(byte[] keyBytes) {
 
-
         try {
+            privateKey = KeyFactory.getInstance("RSA").generatePrivate(new PKCS8EncodedKeySpec(keyBytes));
+        } catch (InvalidKeySpecException e) {
+            e.printStackTrace();
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        }
+
+        /*try {
             DerInputStream derReader = new DerInputStream(keyBytes);
 
             DerValue[] seq = derReader.getSequence(0);
@@ -167,7 +183,7 @@ public class AsymmetricEncryption {
             e.printStackTrace();
         } catch (Exception e) {
             e.printStackTrace();
-        }
+        }*/
     }
 
     public Key getPrivateKey() {
@@ -214,17 +230,17 @@ public class AsymmetricEncryption {
         byte[] encodedKey = Base64.decode(keyStringPublic, Base64.DEFAULT);
         //*Key privateKey = new SecretKeySpec(encodedKey, 0, encodedKey.length, "RSA");
         this.setPublicKey(encodedKey);
-        Log.i("HCEDEMO", "public key: " + this.getPublicKey().toString() + " format: " + this.getPublicKey().getFormat());
+        Log.i(TAG, "public key: " + this.getPublicKey().toString() + " format: " + this.getPublicKey().getFormat());
 
         try {
             encodedKey = Base64.decode(keyStringPrivate, Base64.DEFAULT);
             this.setPrivateKey(encodedKey);
-            Log.i("HCEDEMO", "private key: " + this.getPrivateKey().toString() + " format: " + this.getPrivateKey().getFormat());
+            Log.i(TAG, "private key: " + this.getPrivateKey().toString() + " format: " + this.getPrivateKey().getFormat());
         } catch (Exception e) {
             e.printStackTrace();
         }
 
-        byte[] msg = this.encodeWithPrivate("ahojdasdas");
+        /*byte[] msg = this.encodeWithPrivate("ahojdasdas");
         String msgString = Base64.encodeToString(msg, Base64.DEFAULT);
 
         Log.i(TAG, "encoded with private: " + msgString + "size: " + msgString.length());
@@ -232,7 +248,7 @@ public class AsymmetricEncryption {
         byte[] decodedMsg = Base64.decode(msgString, Base64.DEFAULT);
         String decodedMsgString = this.decodeWithPublic(decodedMsg);
 
-        Log.i(TAG, "decoded with public: " + decodedMsgString + "size: " + decodedMsgString.length());
+        Log.i(TAG, "decoded with public: " + decodedMsgString + "size: " + decodedMsgString.length());*/
     }
 
 }
