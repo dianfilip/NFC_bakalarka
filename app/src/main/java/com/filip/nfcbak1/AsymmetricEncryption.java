@@ -12,11 +12,13 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.security.GeneralSecurityException;
+import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.Security;
@@ -27,7 +29,10 @@ import java.security.spec.RSAPrivateKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Enumeration;
 
+import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 
 import sun.security.util.DerInputStream;
 import sun.security.util.DerValue;
@@ -143,10 +148,12 @@ public class AsymmetricEncryption {
         }
     }
 
-    public void setPrivateKey(byte[] keyBytes) {
+    public void setPrivateKey(String keyStringPrivate) {
+
+        keyStringPrivate = keyStringPrivate.replace("\\r", "").replace("\\n", "").replace("-----BEGIN RSA PRIVATE KEY-----", "").replace("-----END RSA PRIVATE KEY-----", "");
 
         try {
-            privateKey = KeyFactory.getInstance("RSA").generatePrivate(new PKCS8EncodedKeySpec(keyBytes));
+            privateKey = KeyFactory.getInstance("RSA").generatePrivate(new PKCS8EncodedKeySpec((Base64.decode(keyStringPrivate, Base64.DEFAULT))));
         } catch (InvalidKeySpecException e) {
             e.printStackTrace();
         } catch (NoSuchAlgorithmException e) {
@@ -194,48 +201,22 @@ public class AsymmetricEncryption {
         return publicKey;
     }
 
-    public void testMethod() {
+    public static void testMethod() {
 
-        String keyStringPublic = "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCh0+deNV2127KGdvxF8YKnMVzB\n" +
-                "NNm0R4BUeYNBJwMSiYRN9yDlDJS3MXYrQ91zSDxQcRBd7pteutNXdo8dtn3Q+NdL\n" +
-                "v48gVX6JwxZ0e+KyOJz0JMQSotjLIIZSsfVNoRBSsxEsZuuy/ccWPsleeDS1gfMS\n" +
-                "xxU7YxH8IgI1yHx5UQIDAQAB";
+        String keyStringPrivate = "-----BEGIN RSA PRIVATE KEY-----\\r\\nMIICXAIBAAKBgQCkngS0Iu5rWLtGt\\/EwMzyHwBJip3e6KUflolmqRo6aBVsG0WMI\\r\\nr1AwU69hecpLX1RkQC2XgFypqslkGQ9vcbuNpNgkanaqsbKCKMRzIAtAmFi8RqU1\\r\\nwzA2KcmV5hbOVQtzubVnly\\/KkEvN2vqtMxyrnXDafueZRls5JfuSfcyOewIDAQAB\\r\\nAoGAbB0j9bLjZzkVdjKkgwWDgZyR9p0KMwedoqFnxj8ktN9Dk0y9gByzy6mKi7hT\\r\\nNgFcCaNkzhWNxhjWv5j93DGT\\/TtNBzkxeVD8FFKRwL\\/Ny0VTdgxrW0zKsROgmR+H\\r\\nEuDGBcbe5UYaUhazQPH7nZhJ7GuDy++FxZFlmWsZhmejqDECQQDRU4fkh4VUmuoN\\r\\nd9DkN0dXh0cHGjMCtTg0UXu274f2QdNm8guPx8v5RpwK2GAe9ole5CZf+AriztSE\\r\\nAUNCaLOPAkEAyVJ4KGKKL5uf9zJNLDG9BTTJt8Xe4vD7nROhLxGommDD8c\\/cU4n3\\r\\nbD+dYyU3zGkyEYlK+1i6fWnzgPNdlTAQVQJBAKO6f1dr\\/QjhJuMj7Zsj9cRrxk2y\\r\\n22Vp061wcqDzGFiwwicKeaqbr1qqNRFyjzSIx4gWUkHMZM9k0eryheZiuNcCQBsO\\r\\nomeLFtdfKximAgk2hhj1B0dTqKkHikmKIdeZn\\/dfmfYd4Za4rDA4PIbesakfWkNR\\r\\nGGq\\/ehDw9HEYRDOQyiECQHRX0LlEPw6oVXC1mrZSooVGHBAevvXNTCflEPJc3WEO\\r\\nYxTBhCexv4t9pUSd4WYNIiYUHSBEeI4tvigmjg8T7tM=\\r\\n-----END RSA PRIVATE KEY-----";
+        keyStringPrivate = keyStringPrivate.replace("\\r", "").replace("\\n", "").replace("-----BEGIN RSA PRIVATE KEY-----", "").replace("-----END RSA PRIVATE KEY-----", "");
+        System.out.println(keyStringPrivate);
 
-        String keyStringPrivate = "MIICXQIBAAKBgQCh0+deNV2127KGdvxF8YKnMVzBNNm0R4BUeYNBJwMSiYRN9yDl\n" +
-                "DJS3MXYrQ91zSDxQcRBd7pteutNXdo8dtn3Q+NdLv48gVX6JwxZ0e+KyOJz0JMQS\n" +
-                "otjLIIZSsfVNoRBSsxEsZuuy/ccWPsleeDS1gfMSxxU7YxH8IgI1yHx5UQIDAQAB\n" +
-                "AoGAOh8TcCCWoaRggC7n+G7/T/FIsRO8RSWRD8X8wD+0uMmvPRlPNTTJjOo02OEs\n" +
-                "/iSplPKmwDXck69iDH3GdROAKCWTfeUzdFk3yY4ohYSPgLM51u/AmwIITaAms+r/\n" +
-                "KhpFXXl97txosZKwF8Vyy9PV7c2yZuRx+Kexv8kFS+lTXAECQQDRcbBBr4HML5LI\n" +
-                "W0aPNEAxaU6hwwKxxEF7perJGWTOONb/66hyQGK5q1jvykIahoTjB+1U1Lpqe/eu\n" +
-                "mFD+30OxAkEAxcyhgm1AeR+aJGhDmX2OCW+zw4aXA9wYRHI1jo3wKQHnCXGDaID2\n" +
-                "ZKzBZygqMYEwV5HN3QBumBx499821F4XoQJAO04Cx4anrSZnXJ4jy5bS+mrEHh+2\n" +
-                "2pkkpZtkcM7k8VO85ThYOQmsKsCu7S8LKrGeXR64gAXARziU+HYesRyM8QJBAIx7\n" +
-                "Y5JQqePc0AtfifNvuvt0vEX4RzVUkl+6hdMzeAiH82E/n8cPIPArykjLu/vg90aa\n" +
-                "pY17CxE516ikfjqigUECQQC0zx98bPTR2vY0s0A8TVhQZCi02baHhLbTcFSt4/Vh\n" +
-                "4hfqSA0ubCMoOTZ/H4TFzmNzfIkRFKh7S9SX9K00zXSB";
-
-        //String keyStringPublic = Base64.encodeToString(encryption.getPublicKey().getEncoded(), Base64.DEFAULT);
-
-        keyStringPrivate = keyStringPrivate.replace("-----BEGIN PRIVATE KEY-----\n", "");
-        keyStringPrivate = keyStringPrivate.replace("-----END PRIVATE KEY-----", "");
-
-        Log.i(TAG, "string public: " + keyStringPublic);
-        Log.i(TAG, "string private: " + keyStringPrivate);
-
-        //keyStringPublic = keyStringPublic.substring(0,31);
-
-
-
-        byte[] encodedKey = Base64.decode(keyStringPublic, Base64.DEFAULT);
-        //*Key privateKey = new SecretKeySpec(encodedKey, 0, encodedKey.length, "RSA");
-        this.setPublicKey(encodedKey);
-        Log.i(TAG, "public key: " + this.getPublicKey().toString() + " format: " + this.getPublicKey().getFormat());
+        byte[] decoded = null;
 
         try {
-            encodedKey = Base64.decode(keyStringPrivate, Base64.DEFAULT);
-            this.setPrivateKey(encodedKey);
-            Log.i(TAG, "private key: " + this.getPrivateKey().toString() + " format: " + this.getPrivateKey().getFormat());
+            PrivateKey pk = KeyFactory.getInstance("RSA").generatePrivate(new PKCS8EncodedKeySpec(Base64.decode(keyStringPrivate, Base64.DEFAULT)));
+
+            System.out.println(pk);
+
+
+            //Cipher ci = Cipher.getInstance("RSA/ECB/PKCS1Padding", "BC");
+
         } catch (Exception e) {
             e.printStackTrace();
         }

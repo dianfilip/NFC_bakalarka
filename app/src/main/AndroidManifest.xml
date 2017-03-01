@@ -2,9 +2,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.filip.nfcbak1">
 
-    <uses-sdk android:minSdkVersion="19"/>
+    <uses-sdk android:minSdkVersion="19" />
 
     <uses-permission android:name="android.permission.NFC" />
+
+    <android:uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <android:uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <android:uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 
     <application
         android:allowBackup="true"
@@ -26,8 +30,7 @@
         <service
             android:name=".HceService"
             android:exported="true"
-            android:permission="android.permission.BIND_NFC_SERVICE" >
-
+            android:permission="android.permission.BIND_NFC_SERVICE">
             <intent-filter>
                 <action android:name="android.nfc.cardemulation.action.HOST_APDU_SERVICE" />
             </intent-filter>
@@ -36,5 +39,11 @@
                 android:name="android.nfc.cardemulation.host_apdu_service"
                 android:resource="@xml/apduservice" />
         </service>
+
+        <activity
+            android:name=".Main2Activity"
+            android:label="@string/title_activity_main2"
+            android:theme="@style/AppTheme.NoActionBar"></activity>
     </application>
+
 </manifest>
