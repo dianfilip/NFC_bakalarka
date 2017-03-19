@@ -1,10 +1,10 @@
 <resources>
     <string name="app_name">NFC bak1</string>
     <string name="title_activity_main">NFC bak1</string>
-    <string name="action_settings">Nastavenia</string>
+    <string name="action_info">Informácie</string>
     <string name="action_logout">Odhlásiť</string>
-    <string name="section_format">Hello World from section: %1$d</string>
     <string name="servicedesc">servicedesc</string>
     <string name="aiddescription">aiddescription</string>
-    <string name="title_activity_main2">Main2Activity</string>
+    <string name="administrator">Administrátor - FIIT STU</string>
+    <string name="version">Verzia: 1.0</string>
 </resources>

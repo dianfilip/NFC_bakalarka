@@ -28,27 +28,31 @@
             android:layout_alignParentEnd="true" />
     </RelativeLayout>
 
-    <TextView
+    <RelativeLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceLarge"
-        android:text="Logged in:"
-        android:id="@+id/loggedInText"
-        android:layout_gravity="center_horizontal" />
+        android:layout_height="12dp"
+        android:layout_weight="0.11"></RelativeLayout>
+
+    <ImageView
+        android:layout_width="330dp"
+        android:layout_height="201dp"
+        android:id="@+id/statusImg"
+        android:layout_gravity="center_horizontal"
+        android:adjustViewBounds="true"
+        android:layout_weight="0.06" />
 
     <RelativeLayout
         android:layout_width="match_parent"
-        android:layout_height="73dp"
-        android:layout_gravity="center_horizontal"
-        android:layout_weight="0.26"></RelativeLayout>
+        android:layout_height="19dp"
+        android:layout_gravity="right"></RelativeLayout>
 
     <TextView
-        android:layout_width="match_parent"
+        android:layout_width="229dp"
         android:layout_height="wrap_content"
         android:textAppearance="?android:attr/textAppearanceLarge"
-        android:text="Status:"
         android:id="@+id/statusText"
         android:layout_gravity="center_horizontal"
-        android:layout_weight="0.50" />
+        android:layout_weight="0.41"
+        android:textAlignment="center" />
 
 </LinearLayout>
