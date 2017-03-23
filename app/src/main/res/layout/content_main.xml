@@ -52,7 +52,17 @@
         android:textAppearance="?android:attr/textAppearanceLarge"
         android:id="@+id/statusText"
         android:layout_gravity="center_horizontal"
-        android:layout_weight="0.41"
+        android:layout_weight="0.16"
         android:textAlignment="center" />
+
+    <ImageButton
+        android:layout_width="47dp"
+        android:layout_height="34dp"
+        android:id="@+id/infoImgButton"
+        android:layout_gravity="center_horizontal"
+        android:clickable="false"
+        android:adjustViewBounds="true"
+        android:background="@color/background_material_light"
+        android:scaleType="fitCenter" />
 
 </LinearLayout>

@@ -22,9 +22,11 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.io.*;
 import java.security.MessageDigest;
@@ -56,6 +58,7 @@ public class MainActivity extends AppCompatActivity {
 
     private TextView statusText = null;
     private ImageView statusImg = null;
+    private ImageButton infoImgButton = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -64,6 +67,7 @@ public class MainActivity extends AppCompatActivity {
 
         statusText = (TextView) findViewById(R.id.statusText);
         statusImg = (ImageView) findViewById(R.id.statusImg);
+        infoImgButton = (ImageButton) findViewById(R.id.infoImgButton);
 
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -325,12 +329,11 @@ public class MainActivity extends AppCompatActivity {
 
         final EditText loginBox = new EditText(this);
         loginBox.setHint("Login");
-        loginBox.setText("test1");
+        loginBox.setText("test_1");
         layout.addView(loginBox);
 
         final EditText passwordBox = new EditText(this);
         passwordBox.setHint("Heslo");
-        passwordBox.setText("heslo");
         passwordBox.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
         layout.addView(passwordBox);
 
@@ -364,6 +367,11 @@ public class MainActivity extends AppCompatActivity {
                     return;
                 }
 
+                if (user.length() < 6 || password.length() < 6 || user.contains(" ") || password.contains(" ")) {
+                    Toast.makeText(getApplicationContext(), "Zlý formát mena alebo hesla", Toast.LENGTH_LONG).show();
+                    return;
+                }
+
                 getSupportActionBar().setTitle("Prihlásený: " + user);
 
                 loadUsersFile();
@@ -371,12 +379,24 @@ public class MainActivity extends AppCompatActivity {
                     status = REGISTERED_STATE;
                     statusText.setText("Zariadenie je pripravené");
                     statusImg.setImageResource(R.drawable.checkmark);
+                    infoImgButton.setImageResource(android.R.color.transparent);
+                    infoImgButton.setClickable(false);
 
                     startServiceForAuthentication();
                 } else {
                     status = NOT_REGISTERED_STATE;
                     statusText.setText("Zariadenie nie je registrované, kontaktujte administrátora");
                     statusImg.setImageResource(R.drawable.cancel);
+                    infoImgButton.setImageResource(R.drawable.infobutton);
+                    infoImgButton.setClickable(true);
+
+                    infoImgButton.setOnClickListener(
+                            new Button.OnClickListener() {
+                                public void onClick(View v) {
+                                    infoDialog();
+                                }
+                            }
+                    );
 
                     startServiceForRegistration(user);
                 }
@@ -416,6 +436,8 @@ public class MainActivity extends AppCompatActivity {
         startServiceWithNotLoggedUser();
         statusImg.setImageResource(android.R.color.transparent);
         statusText.setText("");
+        infoImgButton.setImageResource(android.R.color.transparent);
+        infoImgButton.setClickable(false);
         login();
     }
 
@@ -459,6 +481,7 @@ public class MainActivity extends AppCompatActivity {
     public String encryptKey() {
 
         String encryptedString = null;
+        System.out.println("To encrypt: " + password);
 
         try {
             byte[] key = password.getBytes("UTF-8");
@@ -474,7 +497,7 @@ public class MainActivity extends AppCompatActivity {
             byte[] encrypted = cipher.doFinal((this.key).getBytes("UTF-8"));
             encryptedString = Base64.encodeToString(encrypted, Base64.DEFAULT);
 
-            System.out.println("encrypted key: " + encryptedString);
+            System.out.println("Encrypted key: " + encryptedString);
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
