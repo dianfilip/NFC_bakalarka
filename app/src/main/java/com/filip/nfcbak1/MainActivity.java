@@ -6,7 +6,6 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.graphics.Color;
 import android.nfc.NfcAdapter;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
@@ -31,6 +30,7 @@ import android.widget.Toast;
 import java.io.*;
 import java.security.MessageDigest;
 import java.util.Arrays;
+import java.util.Date;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -40,14 +40,8 @@ public class MainActivity extends AppCompatActivity {
 
     public static final String TAG = "MainActivity";
 
-    public static int NOT_LOGGED_IN_STATE = 1;
-    public static int NOT_REGISTERED_STATE = 2;
-    public static int REGISTERED_STATE = 3;
-
-    private ServiceIntentReceiver serviceIntentReceiver;
-    private NfcAdapter nfcAdpt;
-
-    private int status = NOT_LOGGED_IN_STATE;
+    private ServiceIntentReceiver serviceIntentReceiver = null;
+    private NfcAdapter nfcAdpt = null;
 
     private String usersFileContent = null;
     private String userInfo = null;
@@ -65,13 +59,20 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        Intent intent = this.getIntent();
+        Log.i(TAG, "Started activity with intent: " + intent);
+
+        if(intent.getAction().equals(Constants.NOTIFICATION_START) && intent.getExtras() != null) {
+            password = intent.getExtras().getString("password");
+            System.out.println("Password from notification: " + password);
+        }
+
         statusText = (TextView) findViewById(R.id.statusText);
         statusImg = (ImageView) findViewById(R.id.statusImg);
         infoImgButton = (ImageButton) findViewById(R.id.infoImgButton);
 
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-        getSupportActionBar().setTitle("Neprihlásený");
 
         Button testBtn = (Button) findViewById(R.id.testBtn);
         assert testBtn != null;
@@ -91,8 +92,30 @@ public class MainActivity extends AppCompatActivity {
         nfcAdpt = NfcAdapter.getDefaultAdapter(this);
         checkNFC();
 
+        loadUsersFile();
+
         startServiceWithNotLoggedUser();
+        getSupportActionBar().setTitle("Neprihlásený");
+        clearLoggedUserInFile();
         login();
+
+        /*if(checkIfLoggedIn()) {
+            getSupportActionBar().setTitle("Prihlásený: " + user);
+            statusText.setText("Zariadenie je pripravené");
+            statusImg.setImageResource(R.drawable.checkmark);
+            infoImgButton.setImageResource(android.R.color.transparent);
+            infoImgButton.setClickable(false);
+
+            if(intent.getAction().equals(Constants.NOTIFICATION_START) && password != null) {
+                startServiceForAuthentication();
+            }
+        } else {
+            startServiceWithNotLoggedUser();
+
+            getSupportActionBar().setTitle("Neprihlásený");
+            clearLoggedUserInFile();
+            login();
+        }*/
     }
 
     @Override
@@ -119,7 +142,7 @@ public class MainActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-
+    //kontrola NFC
 
     public void checkNFC() {
         if (nfcAdpt == null) {
@@ -162,29 +185,40 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    //startovanie servicu
+
     public void startServiceForRegistration(String user){
         Intent intent = new Intent(this, HceService.class);
+        intent.setAction(Constants.STARTED_FROM_ACTIVITY);
 
-        intent.putExtra("status", NOT_REGISTERED_STATE);
+        intent.putExtra("status", Constants.NOT_REGISTERED_STATE);
         intent.putExtra("user", user);
+
         this.startService(intent);
     }
 
     public void startServiceForAuthentication(){
         Intent intent = new Intent(this, HceService.class);
+        intent.setAction(Constants.STARTED_FROM_ACTIVITY);
 
-        intent.putExtra("status", REGISTERED_STATE);
+        intent.putExtra("status", Constants.REGISTERED_STATE);
         intent.putExtra("uuid", uuid);
         intent.putExtra("key", key);
+        intent.putExtra("password", password);
+
         this.startService(intent);
     }
 
     public void startServiceWithNotLoggedUser() {
         Intent intent = new Intent(this, HceService.class);
+        intent.setAction(Constants.STARTED_FROM_ACTIVITY);
 
-        intent.putExtra("status", NOT_LOGGED_IN_STATE);
+        intent.putExtra("status", Constants.NOT_LOGGED_IN_STATE);
+
         this.startService(intent);
     }
+
+    //praca so suborom
 
     public void loadUsersFile() {
         try {
@@ -192,6 +226,8 @@ public class MainActivity extends AppCompatActivity {
         } catch (FileNotFoundException e) {
             createUsersFile();
         }
+
+        //createUsersFile();
 
         try {
             FileInputStream fis = this.openFileInput("users");
@@ -215,7 +251,33 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public boolean checkIfRegistered(String userName) {
+    public boolean checkIfLoggedIn() {
+        String lines[] = usersFileContent.split("\\r?\\n");
+        String firstLine = lines[0];
+
+        System.out.println("checking for logged user..");
+        System.out.println(firstLine);
+
+        if(firstLine.length() == 1) {
+            return false;
+        }
+
+        String msString = firstLine.split(" ")[4];
+        Long ms = new Long(msString);
+
+        if(System.currentTimeMillis() - ms > Constants.VALID_LOGIN_TIME) {
+            Log.i(TAG, "Login not valid");
+
+            return false;
+        } else {
+            userInfo = firstLine;
+            user = firstLine.split(" ")[1];
+
+            return true;
+        }
+    }
+
+    public boolean checkIfRegistered(String userName) throws BadPaddingException {
         boolean isRegistered = false;
         System.out.println("Looking for " + userName);
 
@@ -240,15 +302,70 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
 
-        System.out.println("najdeny user: " + userInfo);
+        System.out.println("found user: " + userInfo);
 
         if(isRegistered) {
             uuid = userInfo.split(" ")[2];
             System.out.println(uuid);
-            key = decryptKey(userInfo.split(" ")[3]);
+
+            try {
+                key = decryptKey(userInfo.split(" ")[3]);
+            } catch (BadPaddingException e) {
+                throw new BadPaddingException();
+            }
         }
 
         return isRegistered;
+    }
+
+    public void clearLoggedUserInFile() {
+        System.out.println("\nclearing logged user from file..");
+
+        System.out.println(usersFileContent);
+        System.out.println("logged user: " + userInfo);
+
+        String lines[] = usersFileContent.toString().split("\\r?\\n");
+
+        StringBuilder newUsersFileContent = new StringBuilder("-");
+
+        for(int i = 1; i < lines.length; i++) {
+            newUsersFileContent.append("\n" + lines[i]);
+        }
+
+        System.out.println("new content:");
+        System.out.println(newUsersFileContent);
+
+        this.saveFile(newUsersFileContent.toString());
+    }
+
+    public void saveLoggedUserToFile() {
+        System.out.println("\nsaving logged user to file..");
+
+        System.out.println(usersFileContent);
+        System.out.println("logged user: " + userInfo);
+
+        String newUserInfoFields[] = userInfo.split(" ");
+        StringBuilder newUserInfoBuilder = new StringBuilder("- ");
+        newUserInfoBuilder.append(newUserInfoFields[1] + " ");
+        newUserInfoBuilder.append(newUserInfoFields[2] + " ");
+        newUserInfoBuilder.append(newUserInfoFields[3]);
+
+        Long tsLong = System.currentTimeMillis();
+        Date loggedDate = new Date(tsLong);
+        System.out.println(loggedDate);
+
+        StringBuilder newUsersFileContent = new StringBuilder(newUserInfoBuilder.toString() + " " + tsLong);
+
+        String lines[] = usersFileContent.toString().split("\\r?\\n");
+
+        for(int i = 1; i < lines.length; i++) {
+            newUsersFileContent.append("\n" + lines[i]);
+        }
+
+        System.out.println("new content:");
+        System.out.println(newUsersFileContent);
+
+        this.saveFile(newUsersFileContent.toString());
     }
 
     public int saveUser() {
@@ -288,22 +405,28 @@ public class MainActivity extends AppCompatActivity {
         String encryptedKey = this.encryptKey();
         //String decryptedKey = this.decryptKey(encryptedKey);
 
-        String newUserLine = newId + " " + user + " " + uuid + " " + encryptedKey.replace("\n", "") + " 12345";
+        String newUserLine = newId + " " + user + " " + uuid + " " + encryptedKey.replace("\n", "") ;
         userInfo = newUserLine;
         System.out.println("new user: " + newUserLine);
 
         String newContent = buf.toString() + newUserLine;
+        usersFileContent = newContent;
+
+        saveLoggedUserToFile();
+
+        return newId;
+    }
+
+    public void saveFile(String content) {
         String fileName = "users";
 
         try {
             FileOutputStream outputStream = openFileOutput(fileName, Context.MODE_PRIVATE);
-            outputStream.write(newContent.getBytes());
+            outputStream.write(content.getBytes());
             outputStream.close();
         } catch (Exception e) {
             e.printStackTrace();
         }
-
-        return newId;
     }
 
     public void createUsersFile() {
@@ -319,6 +442,8 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    //prihlasenie/odhlasenie
+
     public void login() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
 
@@ -330,10 +455,12 @@ public class MainActivity extends AppCompatActivity {
         final EditText loginBox = new EditText(this);
         loginBox.setHint("Login");
         loginBox.setText("test_1");
+        loginBox.setSingleLine(true);
         layout.addView(loginBox);
 
         final EditText passwordBox = new EditText(this);
         passwordBox.setHint("Heslo");
+        passwordBox.setSingleLine(true);
         passwordBox.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
         layout.addView(passwordBox);
 
@@ -348,8 +475,9 @@ public class MainActivity extends AppCompatActivity {
 
         builder.setNegativeButton("Zrušiť", new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int whichButton) {
+                clearLoggedUserInFile();
                 finish();
-                System.exit(0);
+                //System.exit(0);
             }
         });
 
@@ -367,7 +495,7 @@ public class MainActivity extends AppCompatActivity {
                     return;
                 }
 
-                if (user.length() < 6 || password.length() < 6 || user.contains(" ") || password.contains(" ")) {
+                if (user.length() < 5 || password.length() < 5 || user.contains(" ") || password.contains(" ")) {
                     Toast.makeText(getApplicationContext(), "Zlý formát mena alebo hesla", Toast.LENGTH_LONG).show();
                     return;
                 }
@@ -375,30 +503,36 @@ public class MainActivity extends AppCompatActivity {
                 getSupportActionBar().setTitle("Prihlásený: " + user);
 
                 loadUsersFile();
-                if (checkIfRegistered(user)) {
-                    status = REGISTERED_STATE;
-                    statusText.setText("Zariadenie je pripravené");
-                    statusImg.setImageResource(R.drawable.checkmark);
-                    infoImgButton.setImageResource(android.R.color.transparent);
-                    infoImgButton.setClickable(false);
 
-                    startServiceForAuthentication();
-                } else {
-                    status = NOT_REGISTERED_STATE;
-                    statusText.setText("Zariadenie nie je registrované, kontaktujte administrátora");
-                    statusImg.setImageResource(R.drawable.cancel);
-                    infoImgButton.setImageResource(R.drawable.infobutton);
-                    infoImgButton.setClickable(true);
+                try {
 
-                    infoImgButton.setOnClickListener(
-                            new Button.OnClickListener() {
-                                public void onClick(View v) {
-                                    infoDialog();
+                    if (checkIfRegistered(user)) {
+                        saveLoggedUserToFile();
+
+                        statusText.setText("Zariadenie je pripravené");
+                        statusImg.setImageResource(R.drawable.checkmark);
+                        infoImgButton.setImageResource(android.R.color.transparent);
+                        infoImgButton.setClickable(false);
+
+                        startServiceForAuthentication();
+                    } else {
+                        statusText.setText("Zariadenie nie je registrované, kontaktujte administrátora");
+                        statusImg.setImageResource(R.drawable.cancel);
+                        infoImgButton.setImageResource(R.drawable.infobutton);
+                        infoImgButton.setClickable(true);
+
+                        infoImgButton.setOnClickListener(
+                                new Button.OnClickListener() {
+                                    public void onClick(View v) {
+                                        infoDialog();
+                                    }
                                 }
-                            }
-                    );
+                        );
 
-                    startServiceForRegistration(user);
+                        startServiceForRegistration(user);
+                    }
+                } catch (BadPaddingException e) {
+                    wrongPasswordAlert();
                 }
 
                 dialog.dismiss();
@@ -438,6 +572,7 @@ public class MainActivity extends AppCompatActivity {
         statusText.setText("");
         infoImgButton.setImageResource(android.R.color.transparent);
         infoImgButton.setClickable(false);
+        clearLoggedUserInFile();
         login();
     }
 
@@ -449,13 +584,16 @@ public class MainActivity extends AppCompatActivity {
         builder.setNeutralButton("OK", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                login();
+                logout();
             }
         });
 
+        builder.setCancelable(false);
         final AlertDialog dialog = builder.create();
         dialog.show();
     }
+
+    //informacie
 
     public void infoDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
@@ -478,10 +616,12 @@ public class MainActivity extends AppCompatActivity {
         dialog.show();
     }
 
+    //sifrovanie kluca
+
     public String encryptKey() {
 
         String encryptedString = null;
-        System.out.println("To encrypt: " + password);
+        System.out.println("to encrypt: " + key);
 
         try {
             byte[] key = password.getBytes("UTF-8");
@@ -497,15 +637,15 @@ public class MainActivity extends AppCompatActivity {
             byte[] encrypted = cipher.doFinal((this.key).getBytes("UTF-8"));
             encryptedString = Base64.encodeToString(encrypted, Base64.DEFAULT);
 
-            System.out.println("Encrypted key: " + encryptedString);
+            System.out.println("encrypted key: " + encryptedString);
         } catch (Exception e) {
             e.printStackTrace();
-        } finally {
-            return encryptedString;
         }
+
+        return encryptedString;
     }
 
-    public String decryptKey(String encryptedKey) {
+    public String decryptKey(String encryptedKey) throws BadPaddingException {
 
         String decryptedKey = null;
 
@@ -525,13 +665,15 @@ public class MainActivity extends AppCompatActivity {
 
             System.out.println("decrypted key: " + decryptedKey);
         } catch (BadPaddingException e) {
-            wrongPasswordAlert();
+            throw new BadPaddingException();
         } catch (Exception e) {
             e.printStackTrace();
-        } finally {
-            return decryptedKey;
         }
+
+        return decryptedKey;
     }
+
+    //zakladne metody
 
     @Override
     public void onResume() {
@@ -539,8 +681,8 @@ public class MainActivity extends AppCompatActivity {
 
         if (serviceIntentReceiver == null) serviceIntentReceiver = new ServiceIntentReceiver();
         IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction(HceService.REGISTRATION_SUCCESFUL);
-        intentFilter.addAction(HceService.AUTHENTICATION_SUCCESFUL);
+        intentFilter.addAction(Constants.REGISTRATION_SUCCESFUL);
+        intentFilter.addAction(Constants.AUTHENTICATION_SUCCESFUL);
         LocalBroadcastManager.getInstance(getApplicationContext()).registerReceiver(serviceIntentReceiver, intentFilter);
     }
 
@@ -552,27 +694,35 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
-    public void onNewIntent(Intent intent) {
-        super.onNewIntent(intent);
-        setIntent(intent);
+    public void onDestroy() {
 
-        System.out.println("novy intent");
+        Log.i(TAG, "onDestroy!");
+
+        Intent mServiceIntent = new Intent(this, HceService.class);
+
+        stopService(mServiceIntent);
+
+        super.onDestroy();
     }
+
+    //intent receiver
 
     private class ServiceIntentReceiver extends BroadcastReceiver {
         @Override
         public void onReceive(Context context, Intent intent) {
             System.out.println(intent);
 
-            if(intent.getAction().equals(HceService.REGISTRATION_SUCCESFUL)) {
+            if(intent.getAction().equals(Constants.REGISTRATION_SUCCESFUL)) {
                 statusText.setText("Zariadenie je pripravené");
                 statusImg.setImageResource(R.drawable.checkmark);
+                infoImgButton.setImageResource(android.R.color.transparent);
+                infoImgButton.setClickable(false);
 
                 key = intent.getExtras().getString("privateKey");
                 uuid = intent.getExtras().getString("uuid");
 
                 int newId = saveUser();
-                userInfo = newId + " " + user + " " + uuid + " " + key + " 12345";
+                userInfo = newId + " " + user + " " + uuid + " " + key;
 
                 startServiceForAuthentication();
             }
