@@ -32,7 +32,6 @@ public class HceService extends HostApduService {
     public static final String TAG = "HCE";
 
     private String usersFileContent;
-    private String userInfo;
     private String user;
     private String password;
     private Long loggedInTime = null;
@@ -67,9 +66,11 @@ public class HceService extends HostApduService {
                 status = intent.getExtras().getInt("status");
 
                 if (status == Constants.REGISTERED_STATE) {
+
                     uuid = intent.getExtras().getString("uuid");
                     privateKey = intent.getExtras().getString("key");
                     password = intent.getExtras().getString("password");
+                    loggedInTime = intent.getExtras().getLong("loggedInTime");
 
                     System.out.println("key: " + privateKey);
 
@@ -142,7 +143,7 @@ public class HceService extends HostApduService {
         if(System.currentTimeMillis() - loggedInTime > Constants.VALID_LOGIN_TIME) {
             return false;
         } else {
-            userInfo = firstLine;
+
             user = firstLine.split(" ")[1];
             uuid = firstLine.split(" ")[2];
             privateKey = this.decryptKey(firstLine.split(" ")[3]);
@@ -222,12 +223,14 @@ public class HceService extends HostApduService {
                 System.out.println("loggedInTime: " + new Date(loggedInTime));
                 System.out.println("running activity: " + isActivityRunning);
 
-                if(!isActivityRunning && (loggedInTime == null || (System.currentTimeMillis() - loggedInTime > Constants.VALID_LOGIN_TIME))) {
+                if(loggedInTime == null || (System.currentTimeMillis() - loggedInTime > Constants.VALID_LOGIN_TIME)) {
 
                     Intent intent = new Intent(this, MainActivity.class);
                     intent.setAction(Constants.LOGIN_TIMEOUT_START);
                     intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                     startActivity(intent);
+
+                    Log.i(TAG, "Login timed out!");
 
                     return "Device not ready".getBytes();
                 }
@@ -352,14 +355,6 @@ public class HceService extends HostApduService {
     @Override
     public void onDeactivated(int reason) {
         Log.i(TAG, "Deactivated: " + reason);
-
-        /*Intent broadcastIntent = new Intent("RESTART_SERVICE");
-
-        if(password != null) {
-            broadcastIntent.putExtra("password", password);
-        }
-
-        sendBroadcast(broadcastIntent);*/
     }
 
     public void registrationSuccesful() {

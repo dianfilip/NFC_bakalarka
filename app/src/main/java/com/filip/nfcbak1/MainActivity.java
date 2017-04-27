@@ -94,10 +94,7 @@ public class MainActivity extends AppCompatActivity {
 
         loadUsersFile();
 
-        startServiceWithNotLoggedUser();
-        getSupportActionBar().setTitle("Neprihlásený");
-        clearLoggedUserInFile();
-        login();
+        loginProcess();
 
         /*if(checkIfLoggedIn()) {
             getSupportActionBar().setTitle("Prihlásený: " + user);
@@ -205,6 +202,7 @@ public class MainActivity extends AppCompatActivity {
         intent.putExtra("uuid", uuid);
         intent.putExtra("key", key);
         intent.putExtra("password", password);
+        intent.putExtra("loggedInTime", System.currentTimeMillis());
 
         this.startService(intent);
     }
@@ -444,6 +442,14 @@ public class MainActivity extends AppCompatActivity {
 
     //prihlasenie/odhlasenie
 
+    public void loginProcess() {
+
+        startServiceWithNotLoggedUser();
+        getSupportActionBar().setTitle("Neprihlásený");
+        clearLoggedUserInFile();
+        login();
+    }
+
     public void login() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
 
@@ -579,7 +585,7 @@ public class MainActivity extends AppCompatActivity {
     public void wrongPasswordAlert() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
 
-        builder.setMessage("Bolo zadané zlé heslo, je potrebné sa znova prihlásiť!");
+        builder.setMessage("Bolo zadané zlé heslo, je potrebné znova zadať prihlasovacie údaje!");
 
         builder.setNeutralButton("OK", new DialogInterface.OnClickListener() {
             @Override
@@ -725,6 +731,9 @@ public class MainActivity extends AppCompatActivity {
                 userInfo = newId + " " + user + " " + uuid + " " + key;
 
                 startServiceForAuthentication();
+            } else if(intent.getAction().equals(Constants.LOGIN_TIMEOUT_OPEN)) {
+
+                loginProcess();
             }
         }
     }
