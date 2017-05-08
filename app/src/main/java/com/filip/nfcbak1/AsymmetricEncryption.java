@@ -5,22 +5,19 @@ import android.util.Log;
 
 import java.io.UnsupportedEncodingException;
 
-import java.security.Key;
 import java.security.KeyFactory;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
-import java.security.PublicKey;
 import java.security.Security;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
-import java.security.spec.X509EncodedKeySpec;
 
 import javax.crypto.Cipher;
 
 /**
- * Created by Filip on 23.10.2016.
+ * Autor: Filip Dian
+ *
+ * Trieda obsluhujuca vytvaranie kluca a sifrovanie.
  */
 public class AsymmetricEncryption {
 
@@ -32,6 +29,12 @@ public class AsymmetricEncryption {
 
     private PrivateKey privateKey = null;
 
+    /**
+     * Zasifrovanie spravy.
+     *
+     * @param toEncode - sprava na zasifrovanie
+     * @return encodedBytes - bajty zasifrovanej spravy
+     */
     public byte[] encodeWithPrivate(String toEncode) {
         byte[] encodedBytes = null;
         try {
@@ -42,11 +45,15 @@ public class AsymmetricEncryption {
             Log.e(TAG, "RSA encryption error");
         }
 
-        //Log.i(TAG, "[ENCODED]:\n" + Base64.encodeToString(encodedBytes, Base64.DEFAULT) + "\n");
-
         return encodedBytes;
     }
 
+    /**
+     * Odsifrovanie zasifrovanej spravy
+     *
+     * @param encodedBytes - bajty zasifrovanej spravy
+     * @return decodedString - odisfrovana sprava
+     */
     public String decodeWithPrivate(byte[] encodedBytes) {
         byte[] decodedBytes = null;
         try {
@@ -65,12 +72,14 @@ public class AsymmetricEncryption {
             e.printStackTrace();
         }
 
-        //String decodedString = Base64.encodeToString(decodedBytes, Base64.DEFAULT);
-        //Log.i(TAG, "[DECODED]:\n" + decodedString + "\n");
-
         return decodedString;
     }
 
+    /**
+     * Nastavenie kluca pre pouzitie v sifrovanie.
+     *
+     * @param keyStringPrivate
+     */
     public void setPrivateKey(String keyStringPrivate) {
 
         keyStringPrivate = keyStringPrivate.replace("\\r", "").replace("\\n", "").replace("-----BEGIN RSA PRIVATE KEY-----", "").replace("-----END RSA PRIVATE KEY-----", "");
@@ -78,13 +87,12 @@ public class AsymmetricEncryption {
         try {
             privateKey = KeyFactory.getInstance("RSA").generatePrivate(new PKCS8EncodedKeySpec((Base64.decode(keyStringPrivate, Base64.DEFAULT))));
 
-            System.out.println(privateKey);
+            Log.i(TAG, "" + privateKey);
         } catch (InvalidKeySpecException e) {
             e.printStackTrace();
         } catch (NoSuchAlgorithmException e) {
             e.printStackTrace();
         }
-
     }
 
 }

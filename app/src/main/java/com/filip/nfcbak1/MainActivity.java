@@ -36,6 +36,12 @@ import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 
+/**
+ * Autor: Filip Dian
+ *
+ * Trieda predstavujuca hlavnu obrazovku aplikacie. Obsahuje kontrolu NFC, spracovavanie suboru, kontrolu registracie a prihlasenia,
+ * sifrovanie pouzivatelskeho hesla a ine pomocne metody na startovanie HCE apod.
+ */
 public class MainActivity extends AppCompatActivity {
 
     public static final String TAG = "MainActivity";
@@ -43,6 +49,7 @@ public class MainActivity extends AppCompatActivity {
     private ServiceIntentReceiver serviceIntentReceiver = null;
     private NfcAdapter nfcAdpt = null;
 
+    //informacie o pouzivateloch
     private String usersFileContent = null;
     private String userInfo = null;
     private String key = null;
@@ -50,6 +57,7 @@ public class MainActivity extends AppCompatActivity {
     private String user = null;
     private String password = null;
 
+    //prvky rozhrania
     private TextView statusText = null;
     private ImageView statusImg = null;
     private ImageButton infoImgButton = null;
@@ -74,62 +82,35 @@ public class MainActivity extends AppCompatActivity {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        Button testBtn = (Button) findViewById(R.id.testBtn);
-        assert testBtn != null;
-        testBtn.setOnClickListener(
-                new Button.OnClickListener() {
-                    public void onClick(View v) {
-                        user = "test_user";
-                        uuid = "test_uuid";
-                        key = "test_key";
-
-                        saveUser();
-                        loadUsersFile();
-                    }
-                }
-        );
-
         nfcAdpt = NfcAdapter.getDefaultAdapter(this);
         checkNFC();
 
         loadUsersFile();
 
         loginProcess();
-
-        /*if(checkIfLoggedIn()) {
-            getSupportActionBar().setTitle("Prihlásený: " + user);
-            statusText.setText("Zariadenie je pripravené");
-            statusImg.setImageResource(R.drawable.checkmark);
-            infoImgButton.setImageResource(android.R.color.transparent);
-            infoImgButton.setClickable(false);
-
-            if(intent.getAction().equals(Constants.NOTIFICATION_START) && password != null) {
-                startServiceForAuthentication();
-            }
-        } else {
-            startServiceWithNotLoggedUser();
-
-            getSupportActionBar().setTitle("Neprihlásený");
-            clearLoggedUserInFile();
-            login();
-        }*/
     }
 
+    /**
+     * Zavedenie dizajnu vytvoreneho menu.
+     *
+     * @param menu
+     */
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
         return true;
     }
 
+    /**
+     * Ovladanie menu.
+     *
+     * @param item
+     */
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
+
         int id = item.getItemId();
 
-        //noinspection SimplifiableIfStatement
         if (id == R.id.action_info) {
             infoDialog();
         } else if(id == R.id.action_logout) {
@@ -139,11 +120,11 @@ public class MainActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    //kontrola NFC
-
+    /**
+     * Kontrola dostupnosti NFC.
+     */
     public void checkNFC() {
         if (nfcAdpt == null) {
-            //Toast.makeText(this, "NFC not supported", Toast.LENGTH_LONG).show();
 
             AlertDialog.Builder builder = new AlertDialog.Builder(this);
 
@@ -163,7 +144,6 @@ public class MainActivity extends AppCompatActivity {
         }
 
         if (!nfcAdpt.isEnabled()) {
-            //Toast.makeText(this, "Enable NFC before using the app", Toast.LENGTH_LONG).show();
 
             AlertDialog.Builder builder = new AlertDialog.Builder(this);
 
@@ -182,8 +162,11 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    //startovanie servicu
-
+    /**
+     * Startovanie HCE v mode registracie.
+     *
+     * @param user - prihlaseny pouzivatel
+     */
     public void startServiceForRegistration(String user){
         Intent intent = new Intent(this, HceService.class);
         intent.setAction(Constants.STARTED_FROM_ACTIVITY);
@@ -194,6 +177,9 @@ public class MainActivity extends AppCompatActivity {
         this.startService(intent);
     }
 
+    /**
+     * Startovanie HCE v mode autentifikacie.
+     */
     public void startServiceForAuthentication(){
         Intent intent = new Intent(this, HceService.class);
         intent.setAction(Constants.STARTED_FROM_ACTIVITY);
@@ -207,6 +193,9 @@ public class MainActivity extends AppCompatActivity {
         this.startService(intent);
     }
 
+    /**
+     * Startovanie HCE v necinnom mode.
+     */
     public void startServiceWithNotLoggedUser() {
         Intent intent = new Intent(this, HceService.class);
         intent.setAction(Constants.STARTED_FROM_ACTIVITY);
@@ -216,16 +205,16 @@ public class MainActivity extends AppCompatActivity {
         this.startService(intent);
     }
 
-    //praca so suborom
-
+    /**
+     * Nacitanie obsahu suboru do pamate.
+     * Ak sa nacitava po prvom spusteni aplikacie, subor sa najprv sam vyytvori.
+     */
     public void loadUsersFile() {
         try {
             this.openFileInput("users");
         } catch (FileNotFoundException e) {
             createUsersFile();
         }
-
-        //createUsersFile();
 
         try {
             FileInputStream fis = this.openFileInput("users");
@@ -242,48 +231,27 @@ public class MainActivity extends AppCompatActivity {
             }
 
             fis.close();
-            //System.out.println(buf.toString());
+
             usersFileContent = buf.toString();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public boolean checkIfLoggedIn() {
-        String lines[] = usersFileContent.split("\\r?\\n");
-        String firstLine = lines[0];
-
-        System.out.println("checking for logged user..");
-        System.out.println(firstLine);
-
-        if(firstLine.length() == 1) {
-            return false;
-        }
-
-        String msString = firstLine.split(" ")[4];
-        Long ms = new Long(msString);
-
-        if(System.currentTimeMillis() - ms > Constants.VALID_LOGIN_TIME) {
-            Log.i(TAG, "Login not valid");
-
-            return false;
-        } else {
-            userInfo = firstLine;
-            user = firstLine.split(" ")[1];
-
-            return true;
-        }
-    }
-
+    /**
+     * Kontrola registracie zadaneho pouzivatela.
+     *
+     * @param userName - prihlaseny pouzivatel
+     */
     public boolean checkIfRegistered(String userName) throws BadPaddingException {
         boolean isRegistered = false;
-        System.out.println("Looking for " + userName);
+       Log.i(TAG, "Looking for " + userName);
 
         String lines[] = usersFileContent.split("\\r?\\n");
 
         try {
             for (String l : lines) {
-                System.out.println(l);
+                Log.i(TAG, l);
 
                 if (l.equals("-")) {
                     continue;
@@ -300,11 +268,11 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
 
-        System.out.println("found user: " + userInfo);
+        Log.i(TAG, "Found user: " + userInfo);
 
         if(isRegistered) {
             uuid = userInfo.split(" ")[2];
-            System.out.println(uuid);
+            Log.i(TAG, "Registered UUID: " + uuid);
 
             try {
                 key = decryptKey(userInfo.split(" ")[3]);
@@ -316,11 +284,14 @@ public class MainActivity extends AppCompatActivity {
         return isRegistered;
     }
 
+    /**
+     * Vycistenie prihlasenia.
+     */
     public void clearLoggedUserInFile() {
-        System.out.println("\nclearing logged user from file..");
+        Log.i(TAG, "\nClearing logged user from file...");
 
-        System.out.println(usersFileContent);
-        System.out.println("logged user: " + userInfo);
+        Log.i(TAG, "Users file: \n" + usersFileContent);
+        Log.i(TAG, "Logged user: " + userInfo);
 
         String lines[] = usersFileContent.toString().split("\\r?\\n");
 
@@ -330,17 +301,19 @@ public class MainActivity extends AppCompatActivity {
             newUsersFileContent.append("\n" + lines[i]);
         }
 
-        System.out.println("new content:");
-        System.out.println(newUsersFileContent);
+        Log.i(TAG, "New content: \n" + newUsersFileContent);
 
         this.saveFile(newUsersFileContent.toString());
     }
 
+    /**
+     * Zapisanie prihlasenia.
+     */
     public void saveLoggedUserToFile() {
-        System.out.println("\nsaving logged user to file..");
+        Log.i(TAG, "\nSaving logged user to file...");
 
-        System.out.println(usersFileContent);
-        System.out.println("logged user: " + userInfo);
+        Log.i(TAG, "Users file: \n" + usersFileContent);
+        Log.i(TAG, "Logged user: " + userInfo);
 
         String newUserInfoFields[] = userInfo.split(" ");
         StringBuilder newUserInfoBuilder = new StringBuilder("- ");
@@ -350,7 +323,7 @@ public class MainActivity extends AppCompatActivity {
 
         Long tsLong = System.currentTimeMillis();
         Date loggedDate = new Date(tsLong);
-        System.out.println(loggedDate);
+        Log.i(TAG, "Logged time:" + loggedDate);
 
         StringBuilder newUsersFileContent = new StringBuilder(newUserInfoBuilder.toString() + " " + tsLong);
 
@@ -360,12 +333,16 @@ public class MainActivity extends AppCompatActivity {
             newUsersFileContent.append("\n" + lines[i]);
         }
 
-        System.out.println("new content:");
-        System.out.println(newUsersFileContent);
+        Log.i(TAG, "New content: \n" + newUsersFileContent);
 
         this.saveFile(newUsersFileContent.toString());
     }
 
+    /**
+     * Ulozenie novoregistrovaneho pouzivatela do suboru.
+     *
+     * @return newId - id noveho pouzivatela
+     */
     public int saveUser() {
         String str = "";
         StringBuffer buf = new StringBuffer();
@@ -385,8 +362,6 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
 
-        System.out.println(buf.toString());
-
         String lines[] = buf.toString().split("\\r?\\n");
         int lastId;
 
@@ -396,16 +371,14 @@ public class MainActivity extends AppCompatActivity {
             lastId = Integer.parseInt(lines[lines.length - 1].split(" ")[0]);
         }
 
-        //System.out.println(lastId);
         int newId = lastId + 1;
 
         key = key.replace("\n", "");
         String encryptedKey = this.encryptKey();
-        //String decryptedKey = this.decryptKey(encryptedKey);
 
         String newUserLine = newId + " " + user + " " + uuid + " " + encryptedKey.replace("\n", "") ;
         userInfo = newUserLine;
-        System.out.println("new user: " + newUserLine);
+        Log.i(TAG, "New user: " + newUserLine);
 
         String newContent = buf.toString() + newUserLine;
         usersFileContent = newContent;
@@ -415,6 +388,11 @@ public class MainActivity extends AppCompatActivity {
         return newId;
     }
 
+    /**
+     * Ulozenie urceneho obsahu do suboru.
+     *
+     * @param content - novy obsah suboru na zapis
+     */
     public void saveFile(String content) {
         String fileName = "users";
 
@@ -427,6 +405,9 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Vytvorenie suboru po prvom spusteni aplikacie.
+     */
     public void createUsersFile() {
         String fileName = "users";
         String content = "-";
@@ -440,17 +421,21 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    //prihlasenie/odhlasenie
-
+    /**
+     * Nastavenie prihlasenia.
+     */
     public void loginProcess() {
 
         startServiceWithNotLoggedUser();
         getSupportActionBar().setTitle("Neprihlásený");
         clearLoggedUserInFile();
-        login();
+        loginAlert();
     }
 
-    public void login() {
+    /**
+     * Vytvorenie prihlasovacieho okna.
+     */
+    public void loginAlert() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
 
         builder.setTitle("Prihlásenie");
@@ -483,7 +468,6 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(DialogInterface dialog, int whichButton) {
                 clearLoggedUserInFile();
                 finish();
-                //System.exit(0);
             }
         });
 
@@ -546,6 +530,9 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    /**
+     * Zobrazenie odhlasovacieho okna.
+     */
     public void logoutAlert() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
 
@@ -570,6 +557,9 @@ public class MainActivity extends AppCompatActivity {
         dialog.show();
     }
 
+    /**
+     * Odhlasenie.
+     */
     public void logout() {
         userInfo = null;
         getSupportActionBar().setTitle("Neprihlásený");
@@ -579,9 +569,12 @@ public class MainActivity extends AppCompatActivity {
         infoImgButton.setImageResource(android.R.color.transparent);
         infoImgButton.setClickable(false);
         clearLoggedUserInFile();
-        login();
+        loginAlert();
     }
 
+    /**
+     * Zobrazenie upozornenia po zadani zleho hesla.
+     */
     public void wrongPasswordAlert() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
 
@@ -599,8 +592,9 @@ public class MainActivity extends AppCompatActivity {
         dialog.show();
     }
 
-    //informacie
-
+    /**
+     * Zobrazenie okna s informaciami.
+     */
     public void infoDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
 
@@ -622,18 +616,21 @@ public class MainActivity extends AppCompatActivity {
         dialog.show();
     }
 
-    //sifrovanie kluca
-
+    /**
+     * Zasifrovanie privatneho kluca pouzivatela pre ulozenie do suboru.
+     *
+     * @return encryptedString - zasifrovany kluc
+     */
     public String encryptKey() {
 
         String encryptedString = null;
-        System.out.println("to encrypt: " + key);
+        Log.i(TAG, "To encrypt: " + key);
 
         try {
             byte[] key = password.getBytes("UTF-8");
             MessageDigest sha = MessageDigest.getInstance("SHA-1");
             key = sha.digest(key);
-            key = Arrays.copyOf(key, 16); // use only first 128 bit
+            key = Arrays.copyOf(key, 16); // iba prvych 128 bitov
 
             SecretKeySpec secretKeySpec = new SecretKeySpec(key, "AES");
 
@@ -643,7 +640,7 @@ public class MainActivity extends AppCompatActivity {
             byte[] encrypted = cipher.doFinal((this.key).getBytes("UTF-8"));
             encryptedString = Base64.encodeToString(encrypted, Base64.DEFAULT);
 
-            System.out.println("encrypted key: " + encryptedString);
+            Log.i(TAG, "Encrypted key: " + encryptedString);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -651,6 +648,13 @@ public class MainActivity extends AppCompatActivity {
         return encryptedString;
     }
 
+    /**
+     * Odsifrovanie privatneho kluca pouzivatela po nacitani zo suboru.
+     *
+     * @param encryptedKey - nacitany zasifrovany kluc
+     * @return decryptedKey - odsifrovany kluc vhodny na pouzitie
+     * @throws BadPaddingException
+     */
     public String decryptKey(String encryptedKey) throws BadPaddingException {
 
         String decryptedKey = null;
@@ -659,7 +663,7 @@ public class MainActivity extends AppCompatActivity {
             byte[] key = password.getBytes("UTF-8");
             MessageDigest sha = MessageDigest.getInstance("SHA-1");
             key = sha.digest(key);
-            key = Arrays.copyOf(key, 16); // use only first 128 bit
+            key = Arrays.copyOf(key, 16); // iba prvych 128 bitov
 
             SecretKeySpec secretKeySpec = new SecretKeySpec(key, "AES");
 
@@ -669,17 +673,15 @@ public class MainActivity extends AppCompatActivity {
             byte[] decrypted = cipher.doFinal(Base64.decode(encryptedKey, Base64.DEFAULT));
             decryptedKey = new String(decrypted, "UTF-8");
 
-            System.out.println("decrypted key: " + decryptedKey);
+            Log.i(TAG, "Decrypted key: " + decryptedKey);
         } catch (BadPaddingException e) {
-            throw new BadPaddingException();
+            throw new BadPaddingException(); // nastane v pripade zadania zleho hesla
         } catch (Exception e) {
             e.printStackTrace();
         }
 
         return decryptedKey;
     }
-
-    //zakladne metody
 
     @Override
     public void onResume() {
@@ -699,6 +701,9 @@ public class MainActivity extends AppCompatActivity {
         if (serviceIntentReceiver != null)  LocalBroadcastManager.getInstance(getApplicationContext()).unregisterReceiver(serviceIntentReceiver);
     }
 
+    /**
+     * Metoda volana pri vypnuti aplikacie, vypina beziacu HCE sluzbu, ktora sa nasledne restartuje.
+     */
     @Override
     public void onDestroy() {
 
@@ -711,12 +716,13 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
     }
 
-    //intent receiver
-
+    /**
+     * Receiver pre prijimanie sprav odoslanych HCE sluzbou.
+     */
     private class ServiceIntentReceiver extends BroadcastReceiver {
         @Override
         public void onReceive(Context context, Intent intent) {
-            System.out.println(intent);
+            Log.i(TAG, "Received intent from HCE: " + intent);
 
             if(intent.getAction().equals(Constants.REGISTRATION_SUCCESFUL)) {
                 statusText.setText("Zariadenie je pripravené");
@@ -731,9 +737,6 @@ public class MainActivity extends AppCompatActivity {
                 userInfo = newId + " " + user + " " + uuid + " " + key;
 
                 startServiceForAuthentication();
-            } else if(intent.getAction().equals(Constants.LOGIN_TIMEOUT_OPEN)) {
-
-                loginProcess();
             }
         }
     }

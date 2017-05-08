@@ -19,43 +19,56 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.security.MessageDigest;
 import java.util.Arrays;
-import java.util.Date;
 
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 
 /**
- * Created by Filip on 22.10.2016.
+ * Autor: Filip Dian
+ *
+ * Sluzba obsluhujica komunikaciu s terminalom.
+ * Dokaze bezat aj na pozadi, bez zapnutej aplikacie.
  */
 public class HceService extends HostApduService {
 
     public static final String TAG = "HCE";
 
+    //informacie o prihlasenom pouzivatelovi
     private String usersFileContent;
     private String user;
+    private String uuid;
     private String password;
     private Long loggedInTime = null;
 
+    //stav sluzby
     private boolean isActivityRunning = false;
     private int status = Constants.NOT_LOGGED_IN_STATE;
+    private boolean afterRegistration = false;
+
+    //krok spracovavania APDU sprav
     private int step;
 
-    private String uuid;
+    //kluc a jeho spracovavanie
     private String privateKey;
     private StringBuilder keyBuilder;
     private Integer keyPartsCounter;
 
     private AsymmetricEncryption encryption = new AsymmetricEncryption();
 
+    /**
+     * Nastavenie pri nastartovani sluzby.
+     *
+     * @param intent
+     * @param flags
+     * @param startId
+     * @return
+     */
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        //super.onStartCommand(intent, flags, startId);
-
-        //this.pushNotification("Restarted");
 
         step = 0;
 
-        System.out.println("Intent: " + intent);
+        Log.i(TAG, "Started with intent: " + intent);
 
         if(intent != null) {
 
@@ -72,21 +85,19 @@ public class HceService extends HostApduService {
                     password = intent.getExtras().getString("password");
                     loggedInTime = intent.getExtras().getLong("loggedInTime");
 
-                    System.out.println("key: " + privateKey);
-
                     Log.i(TAG, "Started for authentication with step " + step);
 
-                    this.pushNotification("Zariadenie je pripravené", null);
+                    this.pushNotification("Zariadenie je pripravené");
                 } else if (status == Constants.NOT_REGISTERED_STATE) {
                     user = intent.getExtras().getString("user");
 
                     Log.i(TAG, "Started for registration with step " + step);
 
-                    this.pushNotification("Čaká sa na registráciu", null);
+                    this.pushNotification("Čaká sa na registráciu");
                 } else if (status == Constants.NOT_LOGGED_IN_STATE) {
                     Log.i(TAG, "User not logged in");
 
-                    this.pushNotification("Používateľ nie je prihlásený", null);
+                    this.pushNotification("Používateľ nie je prihlásený");
                 }
             } else {
 
@@ -100,19 +111,16 @@ public class HceService extends HostApduService {
                     if (checkIfLoggedIn()) {
                         status = Constants.REGISTERED_STATE;
 
-                        this.pushNotification("Prihlásený používateľ: " + user, null);
-                        //this.pushNotification("Zariadenie je pripravené", validTime / 1000);
-
-                        //startTimer();
+                        this.pushNotification("Prihlásený používateľ: " + user);
                     } else {
                         status = Constants.NOT_LOGGED_IN_STATE;
 
-                        this.pushNotification("Používateľ nie je prihlásený", null);
+                        this.pushNotification("Používateľ nie je prihlásený");
                     }
                 } catch (Exception e) {
                     status = Constants.NOT_LOGGED_IN_STATE;
 
-                    this.pushNotification("Nie je registrovaný žiadny používateľ", null);
+                    this.pushNotification("Nie je registrovaný žiadny používateľ");
                 }
             }
         }
@@ -120,6 +128,12 @@ public class HceService extends HostApduService {
         return START_STICKY;
     }
 
+    /**
+     * Skontrolovanie prihlasenia a jeho platnosti.
+     *
+     * @return isLoggedIn - ci je pouzivatel prihlaseny a jeho platnost nevyprsala
+     * @throws Exception
+     */
     public boolean checkIfLoggedIn() throws Exception {
         String lines[] = usersFileContent.split("\\r?\\n");
 
@@ -129,8 +143,8 @@ public class HceService extends HostApduService {
 
         String firstLine = lines[0];
 
-        System.out.println("checking for logged user..");
-        System.out.println(firstLine);
+        Log.i(TAG, "Checking logged user...");
+        Log.i(TAG, firstLine);
 
         if(firstLine.length() == 1) {
             return false;
@@ -147,14 +161,18 @@ public class HceService extends HostApduService {
             user = firstLine.split(" ")[1];
             uuid = firstLine.split(" ")[2];
             privateKey = this.decryptKey(firstLine.split(" ")[3]);
-            //validTime = VALID_LOGIN_TIME - (System.currentTimeMillis() - ms);
 
-            System.out.println(uuid);
+            Log.i(TAG, "UUID: " + uuid);
 
             return true;
         }
     }
 
+    /**
+     * Nacitanie obsahu suboru do pamate.
+     *
+     * @throws Exception
+     */
     public void loadUsersFile() throws Exception {
         try {
             this.openFileInput("users");
@@ -177,16 +195,18 @@ public class HceService extends HostApduService {
             }
 
             fis.close();
-            System.out.println(buf.toString());
             usersFileContent = buf.toString();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
+    /**
+     * Desifrovanie ulozeneho kluca.
+     *
+     * @param encryptedKey - nacitany zasifrovany kluc
+     */
     public String decryptKey(String encryptedKey) {
-
-        //System.out.println(encryptedKey);
 
         String decryptedKey = null;
 
@@ -194,7 +214,7 @@ public class HceService extends HostApduService {
             byte[] key = password.getBytes("UTF-8");
             MessageDigest sha = MessageDigest.getInstance("SHA-1");
             key = sha.digest(key);
-            key = Arrays.copyOf(key, 16); // use only first 128 bit
+            key = Arrays.copyOf(key, 16); // iba prvych 128 bitov
 
             SecretKeySpec secretKeySpec = new SecretKeySpec(key, "AES");
 
@@ -204,7 +224,7 @@ public class HceService extends HostApduService {
             byte[] decrypted = cipher.doFinal(Base64.decode(encryptedKey, Base64.DEFAULT));
             decryptedKey = new String(decrypted, "UTF-8");
 
-            System.out.println("decrypted key: " + decryptedKey);
+            Log.i(TAG, "Decrypted key: " + decryptedKey);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -212,6 +232,13 @@ public class HceService extends HostApduService {
         return decryptedKey;
     }
 
+    /**
+     * Spracovanie prijimanych APDU sprav.
+     *
+     * @param apdu - prijata bajtova sprava
+     * @param extras
+     * @return byteArray - odoslana bajtova sprava
+     */
     @Override
     public byte[] processCommandApdu(byte[] apdu, Bundle extras) {
 
@@ -219,9 +246,7 @@ public class HceService extends HostApduService {
 
             if (status == Constants.REGISTERED_STATE) {
 
-                System.out.println("uuid: " + uuid);
-                System.out.println("loggedInTime: " + new Date(loggedInTime));
-                System.out.println("running activity: " + isActivityRunning);
+                Log.i(TAG, "Logged uuid: " + uuid);
 
                 if(loggedInTime == null || (System.currentTimeMillis() - loggedInTime > Constants.VALID_LOGIN_TIME)) {
 
@@ -275,12 +300,10 @@ public class HceService extends HostApduService {
 
                         Log.i(TAG, "final key: " + privateKey + " size: " + privateKey.length());
 
-                        registrationSuccesful();
+                        afterRegistration = true;
 
                         return new String("end\0").getBytes();
                     }
-
-                    //registrationSuccesful();
 
                     return new String(keyPartsCounter.toString()).getBytes();
                 }
@@ -320,7 +343,12 @@ public class HceService extends HostApduService {
         return new String("Invalid APDU").getBytes();
     }
 
-    public void pushNotification(String message, Long ms) {
+    /**
+     * Zobrazenie notifikacie na status bare.
+     *
+     * @param message - pozadovana sprava
+     */
+    public void pushNotification(String message) {
 
         NotificationCompat.Builder builder =
                 new NotificationCompat.Builder(this)
@@ -329,10 +357,6 @@ public class HceService extends HostApduService {
                         .setContentTitle(getApplicationContext().getString(R.string.app_name))
                         .setOngoing(true)
                         .setContentText(message);
-
-        if (ms != null) {
-            builder.setSubText("Platnosť: " + ms + "s");
-        }
 
         Intent notificationIntent = new Intent(this, MainActivity.class);
         notificationIntent.setAction(Constants.NOTIFICATION_START);
@@ -346,6 +370,12 @@ public class HceService extends HostApduService {
         manager.notify(0, builder.build());
     }
 
+    /**
+     * Kontrola prijateho AID aplikacie.
+     *
+     * @param apdu - prijate AID
+     * @return isCorrect - spravnost AID
+     */
     private boolean selectAidApdu(byte[] apdu) {
          return apdu.length >= 2 && apdu[0] == (byte)0 && apdu[1] == (byte)0xa4 && apdu[5] == (byte)0xF0 &&
                   apdu[6] == (byte)0x01 && apdu[7] == (byte)0x02 && apdu[8] == (byte)0x03 && apdu[9] == (byte)0x04 &&
@@ -355,8 +385,15 @@ public class HceService extends HostApduService {
     @Override
     public void onDeactivated(int reason) {
         Log.i(TAG, "Deactivated: " + reason);
+
+        if(status == Constants.NOT_REGISTERED_STATE && afterRegistration) {
+            registrationSuccesful();
+        }
     }
 
+    /**
+     * Odoslanie spravy aktivite po spravnom dokonceni registracie.
+     */
     public void registrationSuccesful() {
 
         Intent i = new Intent(Constants.REGISTRATION_SUCCESFUL);
@@ -364,8 +401,6 @@ public class HceService extends HostApduService {
         i.putExtra("privateKey", privateKey);
 
         LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(i);
-
-        //super.stopSelf();
     }
 
     @Override
@@ -374,7 +409,8 @@ public class HceService extends HostApduService {
 
         Log.i(TAG, "onDestroy!");
 
-        if(password != null) {
+        if(status == Constants.REGISTERED_STATE && password != null) {
+
             Intent broadcastIntent = new Intent("RESTART_SERVICE");
             broadcastIntent.putExtra("password", password);
 

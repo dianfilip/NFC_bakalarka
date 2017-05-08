@@ -5,6 +5,11 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 
+/**
+ * Autor: Filip Dian
+ *
+ * Dummy aktivita sluziaca na restartovanie HCE sluzby ked bezi na pozadi bez zapnutej aplikacie.
+ */
 public class TransparentActivity extends AppCompatActivity {
 
     public static String TAG = "TRANSPARENT";
@@ -14,7 +19,7 @@ public class TransparentActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
 
         Intent intent = this.getIntent();
-        Log.i(TAG, "" + intent);
+        Log.i(TAG, "Starting intent: " + intent);
 
         finish();
     }
