@@ -294,6 +294,7 @@ public class HceService extends HostApduService {
                     keyBuilder.append(keyPart);
                     keyPartsCounter++;
 
+                    //kluc sa sa z terminalu posiela po 100 znakoch, po prijati 900 znakov sa prijmianie ukoncuje a registracia je hotova
                     if (keyPartsCounter == 9) {
                         privateKey = keyBuilder.toString().replace("\\r", "").replace("\\n", "").replace("-----BEGIN RSA PRIVATE KEY-----", "").replace("-----END RSA PRIVATE KEY-----", "");
 
@@ -321,6 +322,8 @@ public class HceService extends HostApduService {
 
                     byte[] encoded = encryption.encodeWithPrivate((++number).toString());
 
+                    //ak nebezi hlavna aktivita, system service zrusi po kazdom zbehnuti autentifikacie
+                    //je preto potrebne restartovat ho pomocou neviditelnej aktivity
                     if(!isActivityRunning) {
 
                         Log.i(TAG, "Starting transparent activity...");
