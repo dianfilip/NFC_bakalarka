@@ -43,7 +43,6 @@ public class HceService extends HostApduService {
     //stav sluzby
     private boolean isActivityRunning = false;
     private int status = Constants.NOT_LOGGED_IN_STATE;
-    private boolean afterRegistration = false;
 
     //krok spracovavania APDU sprav
     private int step;
@@ -300,7 +299,7 @@ public class HceService extends HostApduService {
 
                         Log.i(TAG, "final key: " + privateKey + " size: " + privateKey.length());
 
-                        afterRegistration = true;
+                        registrationSuccesful();
 
                         return new String("end\0").getBytes();
                     }
@@ -385,10 +384,6 @@ public class HceService extends HostApduService {
     @Override
     public void onDeactivated(int reason) {
         Log.i(TAG, "Deactivated: " + reason);
-
-        if(status == Constants.NOT_REGISTERED_STATE && afterRegistration) {
-            registrationSuccesful();
-        }
     }
 
     /**
